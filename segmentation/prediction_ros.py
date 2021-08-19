@@ -186,7 +186,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', default="./dataSet/hao/test/rgb", help='Data directory')
     parser.add_argument('--img_extn', default="jpg", help='RGB Image format')
     parser.add_argument('--inWidth', type=int, default=640, help='Width of RGB image')
-    parser.add_argument('--inHeight', type=int, default=320, help='Height of RGB image')
+    parser.add_argument('--inHeight', type=int, default=480, help='Height of RGB image')#320
     parser.add_argument('--savedir', default='./dataSet/hao/results_hao/results_test', help='directory to save the results')
     parser.add_argument('--gpu', default=True, type=bool, help='Run on CPU or GPU. If TRUE, then GPU.')
     parser.add_argument('--pretrained', default='', help='Pretrained weights directory.')
