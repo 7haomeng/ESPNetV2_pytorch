@@ -8,7 +8,7 @@ conda deactivate <env-name> #close
 ```
 
 ## Execution ESPNetv2
-### delete the cached data file (~/ESPNetv2-master/segmentation/city.p)
+delete the cached data file (~/ESPNetv2-master/segmentation/city.p)
 ```
 conda activate opencv_build #start up environment
 CUDA_VISIBLE_DEVICES=0 python3 main_hao.py --s 2.0 #start to train
