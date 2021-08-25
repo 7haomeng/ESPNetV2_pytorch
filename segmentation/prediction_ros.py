@@ -3,6 +3,9 @@
 import rospy
 import rospkg
 from sensor_msgs.msg import Image
+# from std_msgs.msg import Int8MultiArray
+from rospy_tutorials.msg import Floats
+from rospy.numpy_msg import numpy_msg
 
 import numpy as np
 import torch
@@ -81,11 +84,14 @@ class Prediction:
 
         self.img_sub = rospy.Subscriber('/camera/color/image_raw', Image, self.predict_cb)
         self.predict_pub = rospy.Publisher("/ESPNet_v2/predict_img", Image, queue_size=1)
+        self.mask_pub = rospy.Publisher('/ESPNet_v2/mask_img', Image,queue_size=1)
+        self.mask_color_pub = rospy.Publisher('/ESPNet_v2/mask_color_img', Image,queue_size=1)
 
     def predict_cb(self, msg):
         cv_image = self.cv_bridge.imgmsg_to_cv2(msg, "bgr8")    # Convert ros image topic to cv_image
-        predict = self.evaluateModel(args, self.modelA, cv_image)
-        self.predict_pub.publish(self.cv_bridge.cv2_to_imgmsg(predict, "bgr8"))
+        self.evaluateModel(args, self.modelA, cv_image)
+        # predict = self.evaluateModel(args, self.modelA, cv_image)
+        # self.predict_pub.publish(self.cv_bridge.cv2_to_imgmsg(predict, "bgr8"))
 
 
     def relabel(self, img):
@@ -154,7 +160,9 @@ class Prediction:
 
         stop = timeit.default_timer()
         # print("The num of rgb_img: {0}".format(i))
-        print("Time: {0}\n".format(stop-start))
+        print("Time: {0}".format(stop-start))
+        # rospy.loginfo("Time: {0}".format((stop-start)))
+        # rospy.loginfo("fps: {0}".format(1/(stop-start)))
         classMap_numpy = img_out[0].max(0)[1].byte().cpu().data.numpy()
         # if i % 100 == 0 and i > 0:
             # print('Processed [{}/{}]'.format(i, len(image_list)))
@@ -164,18 +172,23 @@ class Prediction:
             classMap_numpy_color = np.zeros((img.shape[1], img.shape[2], img.shape[0]), dtype=np.uint8)
             for idx in range(len(self.pallete)):
                 [r, g, b] = self.pallete[idx]
+                print("classMap_numpy: {0}, shape: {1}, size: {2}".format(np.unique(classMap_numpy), classMap_numpy.shape, classMap_numpy.size))
                 classMap_numpy_color[classMap_numpy == idx] = [b, g, r]
+                print("classMap_numpy_color: {0}, shape: {1}, size: {2}\n".format(np.unique(classMap_numpy_color), classMap_numpy_color.shape, classMap_numpy_color.size))
+                self.mask_pub.publish(self.cv_bridge.cv2_to_imgmsg(classMap_numpy, "8UC1"))
+                self.mask_color_pub.publish(self.cv_bridge.cv2_to_imgmsg(classMap_numpy_color, "8UC3"))
             # cv2.imwrite(args.savedir + os.sep + 'c_' + name.replace(args.img_extn, 'png'), classMap_numpy_color)
             if args.overlay:
                 overlayed = cv2.addWeighted(img_orig, 1.0, classMap_numpy_color, 0.5, 0)
+                self.predict_pub.publish(self.cv_bridge.cv2_to_imgmsg(overlayed, "bgr8"))
                 # cv2.imwrite(args.savedir + os.sep + 'over_' + name.replace(args.img_extn, 'jpg'), overlayed)
-                return overlayed
+                # return overlayed
         if args.cityFormat:
             classMap_numpy = self.relabel(classMap_numpy.astype(np.uint8))
         # cv2.imwrite(args.savedir + os.sep + name.replace(args.img_extn, 'png'), classMap_numpy)
 
     def onShutdown(self):
-        rospy.loginfo("Shutdown.")
+        rospy.logerr("Shutdown.")
 
 
 if __name__ == '__main__':
@@ -203,6 +216,8 @@ if __name__ == '__main__':
     if args.overlay:
         args.colored = True # This has to be true if you want to overlay
     
+    
+    rospy.logwarn("Start predicting")
     prediction = Prediction(args)
     rospy.on_shutdown(prediction.onShutdown)
 
